@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 struct ResponseStruct {
-    status: u16,
+    status_code: u16,
     message: String,
     data: TestStruct, // could be serde_json::Value
 }
