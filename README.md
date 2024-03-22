@@ -20,7 +20,8 @@
 
 use bson::
 use axum::Json;
-use axum_responses::{AxumResult, Response, AxumResponse};
+use serde_json::{Value, to_value};
+use axum_responses::{AxumResult, HttpResponse, AxumResponse};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct LoginData {
@@ -31,7 +32,7 @@ struct LoginData {
 async fn get_user_by_id(filter: doc) -> AxumResult<User> {
 
     let user = User::find_by_id(filter).await
-        .map_err(|_| Response::Standard(500, "Internal Server Error"))? 
+        .map_err(|_| HttpResponse::INTERNAL_SERVER_ERROR)?
     ;
 
     Ok(user)
@@ -42,14 +43,15 @@ async fn get_user_by_id(filter: doc) -> AxumResult<User> {
 async fn login_controller(Json(body): Json<LoginData>) -> AxumResponse {
 
     let filter = doc! { "email": body.email };
-
     let user = get_user_by_id(filter).await?;
 
     if user.password != body.password {
-        return Err(Response::Standard(401, "Unauthorized"))
+        return Err(HttpResponse::UNAUTHORIZED)
     }
 
-    Ok(Response::Standard(200, "OK"))
+    Ok(HttpResponse::JSON(
+        200, "OK", "user", user.to_value().unwrap_or(Value::Null))
+    )
 }
 
 ```
