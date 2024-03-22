@@ -1,66 +1,119 @@
 
-use serde::Serialize;
-use axum::http::StatusCode;
-use lazy_static::lazy_static;
-use serde_json::{to_value, Value};
-
 mod tests;
-pub mod http;
+pub mod extra;
+pub mod impls;
 
-use http::*;
+use extra::*;
+use serde_json::Value;
 
-lazy_static! {
+/// `AxumResponse` data type that represents an HTTP response. 
+/// Can be used as a return type of a controller.
+ 
+pub type AxumResponse = Result<HttpResponse, HttpResponse>;
+
+/// `AxumResult` data type that represents a response 
+/// from some service in the API.
+/// 
+/// ### Parameters
+/// 
+/// * `T`: Data type of the response.
+/// 
+/// ### Example
+/// Returns a type T if the response is successful, 
+/// otherwise it returns a negative `ApiResponse`, 
+/// that is, an error HttpResponse.
+ 
+pub type AxumResult<T> = Result<T, HttpResponse>;
+
+pub enum Response {
     
-    pub static ref INTERNAL_SERVER_ERROR: 
-        StatusCode = StatusCode::from_u16(500).unwrap()
-    ;
-}
-
-pub trait ToJson where Self: Serialize {
-
-    /// Convert the struct to a JSON value
-    /// The provided struct must implement the Serialize trait
+    /// `Standard` is a standard response.
     /// 
-    /// # Example
+    /// ### Parameters
     /// 
-    /// ```
-    /// use serde::Serialize;
+    /// * `u16`: HTTP status code.
+    /// * `&'static str`: Response message.
+     
+    Standard(u16, &'static str),
+
+    /// `JsonData` is a response that contains data.
+    /// 
+    /// ### Parameters
+    /// 
+    /// * `u16`: HTTP status code.
+    /// * `&'static str`: Response message.
+    /// * `&'static str`: Name | key of the Value.
+    /// * `Value`: The data of the response.
+    /// 
+    /// ### Example
+    /// 
+    /// ```rust
+    /// use axum_responses::Response;
+    /// use axum_responses::extra::ToJson;
+    /// 
     /// use serde_json::Value;
-    /// use axum_responses::ToJson;
+    /// use serde::{Serialize, Deserialize};
     /// 
-    /// #[derive(Serialize)]
-    /// struct MyStruct {
-    ///    name: String,
-    ///    age: u8
+    /// #[derive(Serialize, Deserialize)]
+    /// struct TestStruct {
+    ///    field: String
     /// }
     /// 
-    /// impl ToJson for MyStruct {}
+    /// impl ToJson for TestStruct {}
     /// 
-    /// let my_struct = MyStruct {
-    ///    name: "John".to_string(),
-    ///    age: 25
+    /// let test_struct = TestStruct {
+    ///     field: "value".to_string()
     /// };
     /// 
-    /// let json_value: Value = my_struct.to_json();
+    /// let response = Response::JsonData(
+    ///     200, "Success", "data", test_struct.to_json()
+    /// );
+    /// ```
 
-    fn to_json(&self) -> Value {
-        to_value(self).unwrap_or(Value::Null)
-    }
+    JsonData(u16, &'static str, &'static str, Value)
 }
 
-/// Convert a u16 status code to a StatusCode
-/// 
-/// If the provided code is not a valid status code,
-/// the function will return a 500 Internal Server Error
-
-pub fn to_http_status(code: u16) -> StatusCode {
-    StatusCode::from_u16(code).unwrap_or(*INTERNAL_SERVER_ERROR)
-}
-
-pub fn res_type(code: &StatusCode) -> &str {
-
-    match code.is_success() {
-        true => "success",
-        false => "error"
-    }
+#[allow(non_camel_case_types)]
+pub enum HttpResponse {
+    CONTINUE,
+    SWITCHING_PROTOCOLS,
+    OK,
+    CREATED,
+    ACCEPTED,
+    NON_AUTHORITATIVE_INFORMATION,
+    NO_CONTENT,
+    RESET_CONTENT,
+    PARTIAL_CONTENT,
+    MULTIPLE_CHOICES,
+    MOVED_PERMANENTLY,
+    FOUND,
+    SEE_OTHER,
+    NOT_MODIFIED,
+    USE_PROXY,
+    TEMPORARY_REDIRECT,
+    BAD_REQUEST,
+    UNAUTHORIZED,
+    PAYMENT_REQUIRED,
+    FORBIDDEN,
+    NOT_FOUND,
+    METHOD_NOT_ALLOWED,
+    NOT_ACCEPTABLE,
+    PROXY_AUTHENTICATION_REQUIRED,
+    REQUEST_TIMEOUT,
+    CONFLICT,
+    GONE,
+    LENGTH_REQUIRED,
+    PRECONDITION_FAILED,
+    REQUEST_ENTITY_TOO_LARGE,
+    REQUEST_URI_TOO_LONG,
+    UNSUPPORTED_MEDIA_TYPE,
+    REQUESTED_RANGE_NOT_SATISFIABLE,
+    EXPECTATION_FAILED,
+    INTERNAL_SERVER_ERROR,
+    NOT_IMPLEMENTED,
+    BAD_GATEWAY,
+    SERVICE_UNAVAILABLE,
+    GATEWAY_TIMEOUT,
+    HTTP_VERSION_NOT_SUPPORTED,
+    JSON(u16, &'static str, &'static str, Value),
 }
