@@ -95,6 +95,7 @@ impl IntoResponse for HttpResponse {
             HttpResponse::SERVICE_UNAVAILABLE => Response::Standard(503, "Service Unavailable").into_response(),
             HttpResponse::GATEWAY_TIMEOUT => Response::Standard(504, "Gateway Timeout").into_response(),
             HttpResponse::HTTP_VERSION_NOT_SUPPORTED => Response::Standard(505, "HTTP Version Not Supported").into_response(),
+            HttpResponse::CUSTOM(status, message) => Response::Standard(status, message).into_response(),
             HttpResponse::JSON(status, message, key, value) => Response::JsonData(status, message, key, value).into_response(),
         }
     }

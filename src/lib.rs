@@ -115,5 +115,6 @@ pub enum HttpResponse {
     SERVICE_UNAVAILABLE,
     GATEWAY_TIMEOUT,
     HTTP_VERSION_NOT_SUPPORTED,
+    CUSTOM(u16, &'static str),
     JSON(u16, &'static str, &'static str, Value),
 }
