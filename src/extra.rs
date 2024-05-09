@@ -1,4 +1,6 @@
 
+use std::collections::HashMap;
+
 use serde::Serialize;
 use axum::http::StatusCode;
 use serde_json::{to_value, Value};
@@ -34,6 +36,9 @@ pub trait ToJson where Self: Serialize {
         to_value(self).unwrap_or(Value::Null)
     }
 }
+
+impl ToJson for HashMap<String, String> {}
+impl ToJson for HashMap<&'static str, &'static str> {}
 
 /// Convert a u16 status code to a StatusCode
 /// 
