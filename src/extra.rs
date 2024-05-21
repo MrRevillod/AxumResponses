@@ -39,6 +39,7 @@ pub trait ToJson where Self: Serialize {
 
 impl ToJson for HashMap<String, String> {}
 impl ToJson for HashMap<&'static str, &'static str> {}
+impl<T> ToJson for Vec<T> where T: Serialize {}
 
 /// Convert a u16 status code to a StatusCode
 /// 
