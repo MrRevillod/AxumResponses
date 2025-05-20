@@ -10,8 +10,8 @@ pub type ControllerResult = Result<HttpResponse, HttpResponse>;
 pub type HandlerResult = Result<HttpResponse, HttpResponse>;
 
 pub struct HttpResponse {
-    status: StatusCode,
-    body: Value,
+    pub status: StatusCode,
+    pub body: Value,
 }
 
 impl HttpResponse {
