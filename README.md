@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="./images/logo.png" width=250 />
+    <img src="https://raw.githubusercontent.com/MrRevillod/AxumResponses/refs/heads/master/images/logo.png" width=250 />
 </div>
 
 <div align="center">
@@ -7,9 +7,9 @@
 </div>
 
 <div align="center">
-  <a href="README.md" title="English README">🇺🇸 English</a>
+  <a href="https://github.com/MrRevillod/AxumResponses/blob/master/README.md" title="English README">🇺🇸 English</a>
   &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="README[ES].md" title="README en Español">🇪🇸 Español</a>
+  <a href="https://github.com/MrRevillod/AxumResponses/blob/master/README%5BES%5D.mdREADME[ES].md" title="README en Español">🇪🇸 Español</a>
 </div>
 
 <div align="center">
