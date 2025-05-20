@@ -9,7 +9,7 @@
 <div align="center">
   <a href="https://github.com/MrRevillod/AxumResponses/blob/master/README.md" title="English README">🇺🇸 English</a>
   &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="https://github.com/MrRevillod/AxumResponses/blob/master/README%5BES%5D.mdREADME[ES].md" title="README en Español">🇪🇸 Español</a>
+  <a href="https://github.com/MrRevillod/AxumResponses/blob/master/README%5BES%5D.md" title="README en Español">🇪🇸 Español</a>
 </div>
 
 <div align="center">
