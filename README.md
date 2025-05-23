@@ -30,7 +30,7 @@ Add the dependency to your `Cargo.toml` file:
 
 ```toml
 [dependencies]
-axum_responses = "0.2.0"
+axum_responses = "0.2.3"
 ```
 
 Make sure to also include the necessary dependencies like `axum`, `serde`, and `serde_json`.

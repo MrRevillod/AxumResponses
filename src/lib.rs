@@ -43,6 +43,23 @@ macro_rules! response {
         }
     }};
 
+    ($status:expr, { $value:ident }) => {{
+        let status = ::axum::http::StatusCode::from_u16($status);
+
+        let Ok(status) = status else {
+            panic!("Invalid status code: {}", $status);
+        };
+
+        let json = ::serde_json::to_value(&$value).unwrap_or_else(|_| {
+            panic!("Failed to serialize value to JSON");
+        });
+
+        match status.as_u16() {
+            200..=399 => Ok($crate::HttpResponse { status, body: json }),
+            _ => Err($crate::HttpResponse { status, body: json })
+        }
+    }};
+
     ($status:expr, { $($json:tt)* }) => {{
         let status = ::axum::http::StatusCode::from_u16($status);
 
