@@ -74,12 +74,12 @@ impl HttpResponse {
         self
     }
 
-    pub fn wrap_ok(self) -> Result<Self, ()> {
-        Ok(self)
-    }
-
-    pub fn wrap_err(self) -> Result<(), Self> {
-        Err(self)
+    pub fn wrap(self) -> Result<HttpResponse, HttpResponse> {
+        if self.status.is_success() || self.status.is_redirection() {
+            Ok(self)
+        } else {
+            Err(self)
+        }
     }
 }
 
