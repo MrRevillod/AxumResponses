@@ -30,7 +30,7 @@ Agrega la dependencia en tu archivo `Cargo.toml`:
 
 ```toml
 [dependencies]
-axum_responses = "0.2.3"
+axum_responses = "0.3.0"
 ```
 
 Asegúrate de incluir también las dependencias necesarias como `axum`, `serde` y `serde_json`.
@@ -42,8 +42,6 @@ Asegúrate de incluir también las dependencias necesarias como `axum`, `serde` 
 - **Respuestas estándar y personalizadas**: Maneja respuestas HTTP comunes como `200 OK`, `404 Not Found`.
 - **Macros útiles**: Usa el macro `response!` para simplificar la creación de respuestas con códigos de estado y cuerpos personalizados.
 - **Integración con Axum**: Diseñado específicamente para trabajar con el framework Axum.
-- **Manejo de errores**: Facilita la propagación de errores HTTP en tus controladores mediante tipos como `ControllerResult` o `HandlerResult`.
-
 ---
 
 ## Ejemplo de Uso
@@ -54,7 +52,7 @@ La enum `Response` incluye variantes para los códigos de estado HTTP más comun
 
 ```rust
 use axum::{Router, routing::get};
-use axum_responses::Response;
+use axum_responses::standard::Response;
 use serde_json::json;
 
 async fn handler() -> Response {
@@ -72,23 +70,96 @@ fn app() -> Router {
 }
 ```
 
-### Macro `response!`
+### Usando `HttpResponse` para respuestas más flexibles
 
-El macro `response!` permite crear respuestas con un código de estado y un cuerpo JSON de manera más concisa. Este macro retorna un `Result`, donde las respuestas con códigos de estado exitosos (`200..399`) se envuelven en `Ok`, y las demás en `Err`.
+La estructura `HttpResponse` te permite construir respuestas con un código de estado, cuerpo JSON y cabeceras personalizadas utilizando un patrón builder.
 
 ```rust
-use axum_responses::{response, HttpResponse, ControllerResult, HandlerResult};
+use axum_responses::http::HttpResponse;
+use axum::http::StatusCode;
+use serde_json::json;
+use serde::Serialize;
 
-async fn example_handler() -> Result<HttpResponse, HttpResponse> {
+// Handler simple con HttpResponse
+async fn http_response_handler() -> HttpResponse {
+    HttpResponse::build()
+        .status(StatusCode::OK)
+        .add_header("X-Custom-Header", "valor_custom")
+        .body(json!({ "message": "Hola desde HttpResponse" }))
+}
+
+// Handler usando el método `json()` para serializar structs
+#[derive(Serialize)]
+struct User {
+    id: u32,
+    username: String,
+}
+
+async fn http_response_json_struct_handler() -> HttpResponse {
+    let user_data = User {
+        id: 1,
+        username: "usuario_ejemplo".to_string(),
+    };
+    HttpResponse::build()
+        .status(StatusCode::OK)
+        .json(user_data) // Serializa automáticamente User a JSON
+}
+
+// Ejemplo en una aplicación Axum
+use axum::{Router, routing::get};
+
+fn app_with_http_response() -> Router {
+    Router::new()
+        .route("/http", get(http_response_handler))
+        .route("/user", get(http_response_json_struct_handler))
+}
+```
+
+### Macro `response!`
+
+El macro `response!` permite crear respuestas `HttpResponse` con un código de estado y un cuerpo JSON de manera más concisa. También soporta la auto-serialización de structs que implementan `Serialize`.
+
+```rust
+use axum_responses::{response, http::HttpResponse};
+use serde::Serialize;
+
+async fn example_handler() -> HttpResponse {
     response!(200, { "status": "success", "data": "Ejemplo" })
 }
 
-async fn error_handler() -> ControllerResult {
+async fn error_handler() -> HttpResponse {
     response!(404, { "error": "Recurso no encontrado" })
 }
 
-async fn another_error_handler() -> HandlerResult {
+#[derive(Serialize)]
+struct Product {
+    id: String,
+    name: String,
+    price: f64,
+}
+
+async fn product_handler() -> HttpResponse {
+    let product_data = Product {
+        id: "prod_123".to_string(),
+        name: "Producto Ejemplo".to_string(),
+        price: 99.99,
+    };
+    // La struct product_data se serializará automáticamente a JSON
+    response!(201, { product_data })
+}
+
+async fn another_error_handler() -> HttpResponse {
     response!(500, { "error": "Error interno del servidor" })
+}
+
+// Ejemplo en una aplicación Axum
+use axum::{Router, routing::get};
+
+fn app_with_macro() -> Router {
+    Router::new()
+        .route("/macro-example", get(example_handler))
+        .route("/macro-product", get(product_handler))
+        .route("/macro-error", get(error_handler))
 }
 
 ```
@@ -96,14 +167,9 @@ async fn another_error_handler() -> HandlerResult {
 ### Diferencias entre `Response` y `HttpResponse`
 
 - **`Response`**: Es una enumeración diseñada para manejar respuestas estándar y personalizadas de manera sencilla. Es útil para controladores que necesitan devolver respuestas predefinidas.
-- **`HttpResponse`**: Es una estructura más flexible que permite definir un código de estado y un cuerpo JSON arbitrarios. Es ideal para casos donde necesitas un control más granular sobre la respuesta.
+
+- **`HttpResponse`**: Es una estructura más flexible que permite definir un código de estado y un cuerpo JSON arbitrarios. Es ideal para casos donde necesitas un control más granular sobre la respuesta con un patrón de diseño builder.
 
 Ambos tipos implementan el trait `IntoResponse`, lo que significa que pueden ser utilizados directamente como respuestas en Axum.
 
 ---
-
-## Consideraciones
-
-1. **Compatibilidad entre `Response` y `HttpResponse`**: Aunque ambos implementan `IntoResponse`, no son intercambiables directamente. Usa `Response` para respuestas estándar y `HttpResponse` para personalizadas.
-2. **Uso del macro `response!`**: Este macro retorna un `Result`, lo que puede ser útil para manejar errores en controladores. Sin embargo, ten en cuenta que esto puede no ser una práctica común en Axum, ya que normalmente los controladores devuelven un tipo que implementa `IntoResponse` directamente. Entonces deberás utilizar siempre un Result en el controlador. Para esto se incorporaron los tipos `ControllerResult` y `HandlerResult`, ambos siendo un alias para `Result<HttpResponse, HttpResponse>`.
-3. **Errores en macros**: Si usas un código de estado inválido en el macro `response!`, este generará un `panic!`. Asegúrate de usar códigos válidos.
