@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="./images/logo.png" width=250 />
+    <img src="https://pillan.inf.uct.cl/~lrevillod/images/logo-ax-responses.png" width=250 />
 </div>
 
 <div align="center">
@@ -16,13 +16,9 @@
     <strong>A simple way to manage HTTP responses and results in Axum</strong>
 </div>
 
----
-
 ## Description
 
-**Axum Responses** is a library designed to simplify the creation and handling of HTTP responses in applications built with [Axum](https://github.com/tokio-rs/axum). It provides a clear abstraction for handling standard and custom responses, along with useful tools like macros to reduce boilerplate code.
-
----
+**Axum Responses** is a library designed to simplify the creation and handling of HTTP responses in applications built with [Axum](https://github.com/tokio-rs/axum). It provides a clear abstraction for handling standard and custom responses, along with useful tools.
 
 ## Installation
 
@@ -30,100 +26,141 @@ Add the dependency to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-axum_responses = "0.3.1"
+axum_responses = "0.4.0"
 ```
-
-Make sure to also include the necessary dependencies such as `axum`, `serde`, and `serde_json`.
-
----
 
 ## Features
+
 - **Standard and Custom Responses**: Handle common HTTP responses like `200 OK`, `404 Not Found`.
-- **Useful Macros**: Use the `response!` macro to simplify creating responses with custom status codes and bodies.
+- **Useful Macro**: Use the `response!` macro to simplify creating responses with custom status codes and bodies.
 - **Integration with Axum**: Specifically designed to work with the Axum framework.
 
-## Example Usage
+## Usage
 
-```rust
-use axum::{Router, routing::get};
-use axum_responses::standard::Response;
-use serde_json::json;
+### The `HttpResponse` Structure
 
-async fn handler() -> Response {
-    Response::OK
-}
-
-async fn custom_handler() -> Response {
-    Response::CUSTOM(201, json!({ "message": "Created successfully" }))
-}
-
-fn app() -> Router {
-    Router::new()
-        .route("/", get(handler))
-        .route("/custom", get(custom_handler))
-}
-```
-
-### Using `HttpResponse` for More Flexible Responses
-
-The `HttpResponse` structure allows you to build responses with a status code, JSON body, and custom headers using a builder pattern.
+This structure allows you to build responses with a status code, JSON body, and custom headers using a builder pattern.
 
 ```rust
 use axum_responses::http::HttpResponse;
-use axum::http::StatusCode;
-use serde_json::json;
 use serde::Serialize;
 
-// Simple handler using HttpResponse
-async fn http_response_handler() -> HttpResponse {
-    HttpResponse::build()
-        .status(StatusCode::OK)
-        .add_header("X-Custom-Header", "custom_value")
-        .body(json!({ "message": "Hello from HttpResponse" }))
-}
-
-// Handler using the `json()` method to serialize structs
 #[derive(Serialize)]
 struct User {
     id: u32,
     username: String,
 }
 
-async fn http_response_json_struct_handler() -> HttpResponse {
+async fn handler() -> HttpResponse {
     let user_data = User {
         id: 1,
         username: "example_user".to_string(),
     };
-    HttpResponse::build()
-        .status(StatusCode::OK)
-        .json(user_data) // Automatically serializes `User` to JSON
-}
 
-// Example in an Axum application
-use axum::{Router, routing::get};
-
-fn app_with_http_response() -> Router {
-    Router::new()
-        .route("/http", get(http_response_handler))
-        .route("/user", get(http_response_json_struct_handler))
+    HttpResponse::Created()
+        .message("User data retrieved successfully")
+        .data(user_data)
 }
 ```
 
-### `response!` Macro
+#### Resulting Response
 
-The `response!` macro allows you to create `HttpResponse` responses with a status code and a JSON body more concisely. It also supports auto-serialization of structs that implement `Serialize`.
+```json
+{
+  "code": 201,
+  "success": true,
+  "message": "User data retrieved successfully",
+  "timestamp": "2023-10-01T12:00:00Z",
+  "data": {
+    "id": 1,
+    "username": "example_user"
+  }
+}
+```
+
+Otherwise if you response with an http error, for example data validation you have:
+
+```rust
+use axum_responses::http::HttpResponse;
+use serde_json::json;
+
+async fn error_handler() -> HttpResponse {
+    let validation_error = json!({
+        "type": "ValidationError",
+        "errors": [
+            {
+                "field": "username",
+                "message": "Username is required"
+            },
+            {
+                "field": "email",
+                "message": "Email must be a valid email address"
+            }
+        ]
+    });
+
+    HttpResponse::BadRequest()
+        .message("Invalid request data")
+        .data(validation_error)
+}
+```
+
+#### Resulting Response
+
+```json
+{
+  "code": 400,
+  "success": false,
+  "message": "Invalid request data",
+  "timestamp": "2023-10-01T12:00:00Z",
+  "data": {
+    "type": "ValidationError",
+    "errors": [
+      {
+        "field": "username",
+        "message": "Username is required"
+      },
+      {
+        "field": "email",
+        "message": "Email must be a valid email address"
+      }
+    ]
+  }
+}
+```
+
+### The `response!` Macro
+
+The `response!` macro allows you to create `HttpResponse` responses with a status code and a JSON body being more lax. It also supports auto-serialization of structs that implement `Serialize`.
+
+```rust
+use axum_responses::{response, http::HttpResponse};
+
+async fn example_handler() -> HttpResponse {
+    response!(200, { "page": 10, "total": 100, "message": "Success Response (OK)" })
+}
+```
+
+#### Resulting Response
+
+```json
+{
+  "code": 200,
+  "success": true,
+  "message": "Success Response (OK)",
+  "timestamp": "2023-10-01T12:00:00Z",
+  "data": {
+    "page": 10,
+    "total": 100
+  }
+}
+```
+
+The macro also supports single objects in the `data` field, which is useful for returning a single resource or entity. This is designed to be similar to javascript notation.
 
 ```rust
 use axum_responses::{response, http::HttpResponse};
 use serde::Serialize;
-
-async fn example_handler() -> HttpResponse {
-    response!(200, { "status": "success", "data": "Example" })
-}
-
-async fn error_handler() -> HttpResponse {
-    response!(404, { "error": "Resource not found" })
-}
 
 #[derive(Serialize)]
 struct Product {
@@ -138,30 +175,35 @@ async fn product_handler() -> HttpResponse {
         name: "Example Product".to_string(),
         price: 99.99,
     };
-    // The `product_data` struct will be automatically serialized to JSON
+
     response!(201, { product_data })
-}
-
-async fn another_error_handler() -> HttpResponse {
-    response!(500, { "error": "Internal server error" })
-}
-
-// Example in an Axum application
-use axum::{Router, routing::get};
-
-fn app_with_macro() -> Router {
-    Router::new()
-        .route("/macro-example", get(example_handler))
-        .route("/macro-product", get(product_handler))
-        .route("/macro-error", get(error_handler))
 }
 ```
 
-### Differences Between `Response` and `HttpResponse`
+#### Resulting Response
 
-- **`Response`**: An enum designed to handle standard and custom responses in a simple way. It is useful for handlers that need to return predefined responses.
+```json
+{
+  "code": 201,
+  "success": true,
+  "message": "Created",
+  "timestamp": "2023-10-01T12:00:00Z",
+  "data": {
+    "id": "prod_123",
+    "name": "Example Product",
+    "price": 99.99
+  }
+}
+```
 
-- **`HttpResponse`**: A more flexible structure that lets you define a status code and arbitrary JSON body. It's ideal for cases where you need more granular control over the response using a builder-style pattern.
+## Breaking Changes
 
-Both types implement the `IntoResponse` trait, which means they can be used directly as responses in Axum.
+- The `Response` enum has been deprecated in favor of the `HttpResponse` structure.
+- The `ControllerResult` type has been removed, and now you can use `Result<T, HttpResponse>` directly in your handlers, create your own custom Result type, or just use `HttpResponse` directly.
 
+- The library now implements RFC conventions for HTTP responses.
+
+## To Do
+
+- [ ] Add examples for different use cases.
+- [ ] Add support for Tower Cookies on a feature flag.
