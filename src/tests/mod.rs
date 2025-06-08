@@ -31,7 +31,7 @@ async fn test_http_response_simple() {
     let body = response.json::<ResponseBody>();
 
     assert_eq!(response.status_code().as_u16(), 200_u16);
-    assert_eq!(body.message, "This is a simple response");
+    assert_eq!(*body.message, *"This is a simple response");
 }
 
 #[tokio::test]
@@ -56,7 +56,7 @@ async fn test_http_response_data() {
     let body = response.json::<ResponseBody>();
 
     assert_eq!(response.status_code().as_u16(), 201_u16);
-    assert_eq!(body.message, "Item created successfully");
+    assert_eq!(*body.message, *"Item created successfully");
 
     let Some(data) = body.data else {
         panic!("Expected data field in response body");
@@ -83,7 +83,7 @@ async fn test_http_response_error() {
     let body = response.json::<ResponseBody>();
 
     assert_eq!(response.status_code().as_u16(), 400_u16);
-    assert_eq!(body.message, "This is an error response");
+    assert_eq!(*body.message, *"This is an error response");
 
     let Some(error) = body.data else {
         panic!("Expected data field in response body");

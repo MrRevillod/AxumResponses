@@ -1,5 +1,5 @@
 use crate::http::HttpResponse;
-use crate::response;
+use crate::{response, Result};
 
 use serde::Serialize;
 use serde_json::json;
@@ -46,14 +46,14 @@ pub async fn http_response_data_handler() -> HttpResponse {
         .message("Item created successfully")
 }
 
-pub async fn http_response_error_handler() -> HttpResponse {
-    HttpResponse::BadRequest()
-        .message("This is an error response")
-        .data(json!({
-            "type": "ValidationError",
-            "errors": {
-                "param1": "Invalid value for param1",
-                "param2": "Param2 is required"
-            },
-        }))
+pub async fn http_response_error_handler() -> Result<HttpResponse> {
+    Err(HttpResponse::BadRequest()
+            .message("This is an error response")
+            .data(json!({
+                "type": "ValidationError",
+                "errors": {
+                    "param1": "Invalid value for param1",
+                    "param2": "Param2 is required"
+                },
+            })))
 }

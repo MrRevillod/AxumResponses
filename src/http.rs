@@ -1,5 +1,8 @@
+
+use std::collections::HashMap;
+
 use axum::{
-    http::{HeaderMap, HeaderName, HeaderValue, StatusCode},
+    http::{HeaderName, HeaderValue, StatusCode},
     response::IntoResponse,
     Json,
 };
@@ -8,6 +11,7 @@ use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
+#[allow(clippy::result_large_err)]
 /// ## HttpResponse
 /// Represents a structured HTTP response
 /// that can be used in Axum applications.
@@ -34,21 +38,18 @@ use serde_json::{json, Value};
 pub struct HttpResponse {
     data: Option<Value>,
     code: StatusCode,
-    success: bool,
-    message: String,
-    timestamp: String,
-    headers: HeaderMap,
+    message: Box<str>,
+    headers: Option<HashMap<HeaderName, HeaderValue>>,
 }
 
 impl HttpResponse {
+
     pub fn builder(code: StatusCode) -> Self {
         Self {
             code,
             data: None,
-            success: code.is_success(),
-            message: String::new(),
-            timestamp: Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true),
-            headers: HeaderMap::new(),
+            message: code.canonical_reason().unwrap_or("No reason").into(),
+            headers: None
         }
     }
 
@@ -56,7 +57,7 @@ impl HttpResponse {
     /// The `message` parameter should be convertible to a `String`.
     /// This message is typically a human-readable description of the response.
     pub fn message(mut self, message: impl Into<String>) -> Self {
-        self.message = message.into();
+        self.message = message.into().into_boxed_str();
         self
     }
 
@@ -67,7 +68,9 @@ impl HttpResponse {
         if let (Ok(header_name), Ok(header_value)) =
             (HeaderName::try_from(key), HeaderValue::try_from(value))
         {
-            self.headers.insert(header_name, header_value);
+            self.headers
+                .get_or_insert(HashMap::new())
+                .insert(header_name, header_value);
         }
 
         self
@@ -85,6 +88,10 @@ impl HttpResponse {
         self.data = Some(data);
         self
     }
+
+    pub fn build(self) -> impl IntoResponse {
+        self.into_response()
+    }
 }
 
 /// Represents the body of the HTTP response.
@@ -98,7 +105,7 @@ impl HttpResponse {
 pub struct ResponseBody {
     pub code: u16,
     pub success: bool,
-    pub message: String,
+    pub message: Box<str>,
     pub timestamp: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Value>,
@@ -106,11 +113,14 @@ pub struct ResponseBody {
 
 impl IntoResponse for HttpResponse {
     fn into_response(self) -> axum::response::Response {
+
+        let timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
+
         let mut body = json!({
             "code": self.code.as_u16(),
-            "success": self.success,
+            "success": self.code.is_success(),
             "message": self.message,
-            "timestamp": self.timestamp,
+            "timestamp": timestamp
         });
 
         if let Some(content) = self.data {
@@ -119,8 +129,10 @@ impl IntoResponse for HttpResponse {
 
         let mut response = (self.code, Json(body)).into_response();
 
-        for (key, value) in self.headers.iter() {
-            response.headers_mut().insert(key, value.clone());
+        if let Some(headers) = self.headers {
+            for (key, value) in headers.iter() {
+                response.headers_mut().insert(key, value.clone());
+            }
         }
 
         response

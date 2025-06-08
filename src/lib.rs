@@ -9,6 +9,7 @@ pub mod standard;
 
 use http::HttpResponse;
 
+#[allow(clippy::result_large_err)]
 /// This type alias is used to simplify the result type for handlers.
 /// It represents a result that can either be an Type `T` or an `HttpResponse`.
 ///
@@ -72,16 +73,18 @@ macro_rules! response {
             .map(|s| s.to_string());
 
         if let Some(obj) = json.as_object_mut() {
-            obj.remove("message");
+            if message.is_some() {
+                obj.remove("message");
+            }
         }
 
         let mut response = $crate::http::HttpResponse::builder(status)
             .message(status.canonical_reason().unwrap_or("No reason"))
             .data(json);
 
-        if let Some(msg) = message {
-            response = response.message(msg);
-        }
+        response = response.message(message.unwrap_or_else(|| {
+            status.canonical_reason().unwrap_or("No reason").to_string()
+        }));
 
         response
     }};
