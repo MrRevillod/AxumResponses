@@ -1,4 +1,3 @@
-
 use std::collections::HashMap;
 
 use axum::{
@@ -43,13 +42,12 @@ pub struct HttpResponse {
 }
 
 impl HttpResponse {
-
     pub fn builder(code: StatusCode) -> Self {
         Self {
             code,
             data: None,
             message: code.canonical_reason().unwrap_or("No reason").into(),
-            headers: None
+            headers: None,
         }
     }
 
@@ -113,7 +111,6 @@ pub struct ResponseBody {
 
 impl IntoResponse for HttpResponse {
     fn into_response(self) -> axum::response::Response {
-
         let timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
 
         let mut body = json!({
@@ -125,7 +122,7 @@ impl IntoResponse for HttpResponse {
 
         if let Some(content) = self.data {
             body["data"] = content;
-        } 
+        }
 
         let mut response = (self.code, Json(body)).into_response();
 

@@ -2,7 +2,7 @@ mod handlers;
 
 use handlers::{
     http_response_data_handler, http_response_error_handler, http_response_macro_handler,
-    http_response_simple_handler, single_object_response_handler
+    http_response_simple_handler, single_object_response_handler,
 };
 
 use axum::routing::get;
@@ -16,7 +16,10 @@ fn app() -> TestServer {
         .route("/http-response-macro", get(http_response_macro_handler))
         .route("/http-response-data", get(http_response_data_handler))
         .route("/http-response-error", get(http_response_error_handler))
-        .route("/single-object-response", get(single_object_response_handler));
+        .route(
+            "/single-object-response",
+            get(single_object_response_handler),
+        );
 
     TestServer::new(router).unwrap()
 }

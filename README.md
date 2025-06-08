@@ -26,7 +26,7 @@ Add the dependency to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-axum_responses = "0.4.0"
+axum_responses = "0.4.1"
 ```
 
 ## Features
@@ -34,6 +34,9 @@ axum_responses = "0.4.0"
 - **Standard and Custom Responses**: Handle common HTTP responses like `200 OK`, `404 Not Found`.
 - **Useful Macro**: Use the `response!` macro to simplify creating responses with custom status codes and bodies.
 - **Integration with Axum**: Specifically designed to work with the Axum framework.
+- **RFC Conventions**: Follows RFC conventions for HTTP responses, ensuring consistency and clarity in your API responses.
+
+- **Version 0.4.1**: Improve the `HttpResponse` memory size removing unnecessary fields and optimizing the structure for better performance.
 
 ## Usage
 

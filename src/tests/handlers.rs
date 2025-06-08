@@ -48,12 +48,12 @@ pub async fn http_response_data_handler() -> HttpResponse {
 
 pub async fn http_response_error_handler() -> Result<HttpResponse> {
     Err(HttpResponse::BadRequest()
-            .message("This is an error response")
-            .data(json!({
-                "type": "ValidationError",
-                "errors": {
-                    "param1": "Invalid value for param1",
-                    "param2": "Param2 is required"
-                },
-            })))
+        .message("This is an error response")
+        .data(json!({
+            "type": "ValidationError",
+            "errors": {
+                "param1": "Invalid value for param1",
+                "param2": "Param2 is required"
+            },
+        })))
 }
