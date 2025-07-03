@@ -57,3 +57,11 @@ pub async fn http_response_error_handler() -> Result<HttpResponse> {
             },
         })))
 }
+
+pub async fn http_message_macro_handler() -> HttpResponse {
+    response!(200, { "message": "This is a message macro response!" })
+}
+
+pub async fn http_no_data_handler() -> HttpResponse {
+    HttpResponse::Ok().message("This is a no data response")
+}

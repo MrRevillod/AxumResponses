@@ -35,7 +35,7 @@ use serde_json::{json, Value};
 /// with the appropriate status code and a default message.
 #[derive(Debug)]
 pub struct HttpResponse {
-    data: Option<Value>,
+    data: Value,
     code: StatusCode,
     message: Box<str>,
     headers: Option<HashMap<HeaderName, HeaderValue>>,
@@ -45,7 +45,7 @@ impl HttpResponse {
     pub fn builder(code: StatusCode) -> Self {
         Self {
             code,
-            data: None,
+            data: Value::Null,
             message: code.canonical_reason().unwrap_or("No reason").into(),
             headers: None,
         }
@@ -83,7 +83,7 @@ impl HttpResponse {
             json!({ "error": "Serialization failed" })
         });
 
-        self.data = Some(data);
+        self.data = data;
         self
     }
 
@@ -105,24 +105,20 @@ pub struct ResponseBody {
     pub success: bool,
     pub message: Box<str>,
     pub timestamp: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<Value>,
+    pub data: Value,
 }
 
 impl IntoResponse for HttpResponse {
     fn into_response(self) -> axum::response::Response {
         let timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
 
-        let mut body = json!({
+        let body = json!({
             "code": self.code.as_u16(),
             "success": self.code.is_success(),
             "message": self.message,
-            "timestamp": timestamp
+            "timestamp": timestamp,
+            "data": self.data,
         });
-
-        if let Some(content) = self.data {
-            body["data"] = content;
-        }
 
         let mut response = (self.code, Json(body)).into_response();
 

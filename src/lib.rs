@@ -78,13 +78,17 @@ macro_rules! response {
             }
         }
 
-        let mut response = $crate::http::HttpResponse::builder(status)
-            .message(status.canonical_reason().unwrap_or("No reason"))
-            .data(json);
+        if let ::serde_json::Value::Object(obj) = &json {
+            if obj.is_empty() {
+                json = ::serde_json::Value::Null;
+            }
+        }
 
-        response = response.message(message.unwrap_or_else(|| {
-            status.canonical_reason().unwrap_or("No reason").to_string()
-        }));
+        let response = $crate::http::HttpResponse::builder(status)
+            .message(message.unwrap_or_else(|| {
+                status.canonical_reason().unwrap_or("No reason").to_string()
+            }))
+            .data(json);
 
         response
     }};

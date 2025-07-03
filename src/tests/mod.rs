@@ -9,6 +9,8 @@ use axum::routing::get;
 use axum::Router;
 use axum_test::TestServer;
 
+use crate::tests::handlers::{http_message_macro_handler, http_no_data_handler};
+
 #[allow(dead_code)]
 fn app() -> TestServer {
     let router = Router::new()
@@ -19,7 +21,9 @@ fn app() -> TestServer {
         .route(
             "/single-object-response",
             get(single_object_response_handler),
-        );
+        )
+        .route("/http-message-macro", get(http_message_macro_handler))
+        .route("/http-no-data", get(http_no_data_handler));
 
     TestServer::new(router).unwrap()
 }
@@ -61,9 +65,7 @@ async fn test_http_response_data() {
     assert_eq!(response.status_code().as_u16(), 201_u16);
     assert_eq!(*body.message, *"Item created successfully");
 
-    let Some(data) = body.data else {
-        panic!("Expected data field in response body");
-    };
+    let data = body.data;
 
     assert_eq!(data.get("id").unwrap().as_u64().unwrap(), 1);
     assert_eq!(data.get("name").unwrap().as_str().unwrap(), "Test Item");
@@ -88,9 +90,7 @@ async fn test_http_response_error() {
     assert_eq!(response.status_code().as_u16(), 400_u16);
     assert_eq!(*body.message, *"This is an error response");
 
-    let Some(error) = body.data else {
-        panic!("Expected data field in response body");
-    };
+    let error = body.data;
 
     assert_eq!(
         error.get("type").unwrap().as_str().unwrap(),
@@ -119,10 +119,34 @@ async fn test_single_object_response() {
 
     assert_eq!(response.status_code().as_u16(), 200_u16);
 
-    let Some(data) = body.data else {
-        panic!("Expected data field in response body");
-    };
+    let data = body.data;
 
     assert_eq!(data.get("id").unwrap().as_u64().unwrap(), 1);
     assert_eq!(data.get("name").unwrap().as_str().unwrap(), "Test Object");
+}
+
+#[tokio::test]
+async fn test_http_message_macro() {
+    use crate::http::ResponseBody;
+    let server = app();
+    let response = server.get("/http-message-macro").await;
+
+    let body = response.json::<ResponseBody>();
+
+    assert_eq!(response.status_code().as_u16(), 200_u16);
+    assert_eq!(*body.message, *"This is a message macro response!");
+    assert_eq!(body.data, serde_json::Value::Null);
+}
+
+#[tokio::test]
+async fn test_http_no_data() {
+    use crate::http::ResponseBody;
+    let server = app();
+    let response = server.get("/http-no-data").await;
+
+    let body = response.json::<ResponseBody>();
+
+    assert_eq!(response.status_code().as_u16(), 200_u16);
+    assert_eq!(*body.message, *"This is a no data response");
+    assert_eq!(body.data, serde_json::Value::Null);
 }
