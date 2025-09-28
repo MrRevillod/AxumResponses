@@ -104,7 +104,7 @@ async fn error_handler() -> HttpResponse {
 
     HttpResponse::BadRequest()
         .message("Invalid request data")
-        .data(validation_error)
+        .error(validation_error)
 }
 ```
 
@@ -116,7 +116,7 @@ async fn error_handler() -> HttpResponse {
   "success": false,
   "message": "Invalid request data",
   "timestamp": "2023-10-01T12:00:00Z",
-  "data": {
+  "error": {
     "type": "ValidationError",
     "errors": [
       {
@@ -201,12 +201,11 @@ async fn product_handler() -> HttpResponse {
 
 ## Breaking Changes
 
+- If the methods `data`, `error`, or `errors` are not called, those fields will no longer appear in the final response. Previously, the `data` field was included with `null` value.
+
+- Remove previosly marked `deprecated` `Response` enum.
+
 - The `Response` enum has been deprecated in favor of the `HttpResponse` structure.
 - The `ControllerResult` type has been removed, and now you can use `Result<T, HttpResponse>` directly in your handlers, create your own custom Result type, or just use `HttpResponse` directly.
 
 - The library now implements RFC conventions for HTTP responses.
-
-## To Do
-
-- [ ] Add examples for different use cases.
-- [ ] Add support for Tower Cookies on a feature flag.

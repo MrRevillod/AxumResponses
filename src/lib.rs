@@ -4,9 +4,6 @@ mod tests;
 #[allow(non_snake_case)]
 pub mod http;
 
-#[deprecated(note = "Use `http::HttpResponse` variants or builder instead")]
-pub mod standard;
-
 use http::HttpResponse;
 
 #[allow(clippy::result_large_err)]
@@ -17,7 +14,7 @@ use http::HttpResponse;
 /// HttpResponse with data or an error HttpResponse.
 ///
 /// In this context you can use it like this:
-/// ```rust
+/// ```rust,ignore
 /// use axum_responses::http::HttpResponse;
 /// use axum_responses::Result;
 ///

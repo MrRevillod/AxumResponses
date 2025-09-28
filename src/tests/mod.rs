@@ -1,15 +1,8 @@
 mod handlers;
 
-use handlers::{
-    http_response_data_handler, http_response_error_handler, http_response_macro_handler,
-    http_response_simple_handler, single_object_response_handler,
-};
-
-use axum::routing::get;
-use axum::Router;
+use axum::{routing::get, Router};
 use axum_test::TestServer;
-
-use crate::tests::handlers::{http_message_macro_handler, http_no_data_handler};
+use handlers::*;
 
 #[allow(dead_code)]
 fn app() -> TestServer {
@@ -65,7 +58,8 @@ async fn test_http_response_data() {
     assert_eq!(response.status_code().as_u16(), 201_u16);
     assert_eq!(*body.message, *"Item created successfully");
 
-    let data = body.data;
+    assert!(body.data.is_some());
+    let data = body.data.unwrap();
 
     assert_eq!(data.get("id").unwrap().as_u64().unwrap(), 1);
     assert_eq!(data.get("name").unwrap().as_str().unwrap(), "Test Item");
@@ -90,7 +84,8 @@ async fn test_http_response_error() {
     assert_eq!(response.status_code().as_u16(), 400_u16);
     assert_eq!(*body.message, *"This is an error response");
 
-    let error = body.data;
+    assert!(body.error.is_some());
+    let error = body.error.unwrap();
 
     assert_eq!(
         error.get("type").unwrap().as_str().unwrap(),
@@ -119,7 +114,8 @@ async fn test_single_object_response() {
 
     assert_eq!(response.status_code().as_u16(), 200_u16);
 
-    let data = body.data;
+    assert!(body.data.is_some());
+    let data = body.data.unwrap();
 
     assert_eq!(data.get("id").unwrap().as_u64().unwrap(), 1);
     assert_eq!(data.get("name").unwrap().as_str().unwrap(), "Test Object");
@@ -135,7 +131,7 @@ async fn test_http_message_macro() {
 
     assert_eq!(response.status_code().as_u16(), 200_u16);
     assert_eq!(*body.message, *"This is a message macro response!");
-    assert_eq!(body.data, serde_json::Value::Null);
+    assert_eq!(body.data, None);
 }
 
 #[tokio::test]
@@ -148,5 +144,5 @@ async fn test_http_no_data() {
 
     assert_eq!(response.status_code().as_u16(), 200_u16);
     assert_eq!(*body.message, *"This is a no data response");
-    assert_eq!(body.data, serde_json::Value::Null);
+    assert_eq!(body.data, None);
 }
