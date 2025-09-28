@@ -1,6 +1,6 @@
 [package]
 name = "axum_responses"
-version = "0.4.2"
+version = "0.4.3"
 edition = "2021"
 license = "MIT"
 authors = ["Luciano Revillod <lrevillod2022@alu.uct.cl>"]

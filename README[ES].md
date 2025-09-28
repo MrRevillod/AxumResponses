@@ -26,7 +26,7 @@ Añade la dependencia a tu `Cargo.toml`:
 
 ```toml
 [dependencies]
-axum_responses = "0.4.2"
+axum_responses = "0.4.3"
 ```
 
 ## Características
@@ -101,7 +101,7 @@ async fn error_handler() -> HttpResponse {
 
     HttpResponse::BadRequest()
         .message("Datos de solicitud inválidos")
-        .data(validation_error)
+        .error(validation_error)
 }
 ```
 
@@ -113,7 +113,7 @@ async fn error_handler() -> HttpResponse {
   "success": false,
   "message": "Datos de solicitud inválidos",
   "timestamp": "2023-10-01T12:00:00Z",
-  "data": {
+  "error": {
     "type": "ValidationError",
     "errors": [
       {
@@ -198,12 +198,11 @@ async fn product_handler() -> HttpResponse {
 
 ## Cambios Importantes
 
+- Si los metodos `data`, `error`, o `errors` no son llamados, esos campos no serán añadidos en la respuesta final. Anteriormente el campo data era añadido como `nulo` incluso si no tenía asignado valores.
+
+- Se removió el enum `Response` de forma definitiva.
+
 - El enum `Response` ha sido deprecado a favor de la estructura `HttpResponse`.
 - El tipo `ControllerResult` ha sido eliminado, y ahora puedes usar `Result<T, HttpResponse>` directamente en tus manejadores, crear tu propio tipo Result personalizado, o simplemente usar `HttpResponse` directamente.
 
 - La librería ahora implementa convenciones RFC para respuestas HTTP.
-
-## Por Hacer
-
-- [ ] Añadir ejemplos para diferentes casos de uso.
-- [ ] Añadir soporte para Tower Cookies en una feature flag.
