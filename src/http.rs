@@ -10,7 +10,6 @@ use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-#[allow(clippy::result_large_err)]
 /// ## HttpResponse
 ///
 /// Represents a structured HTTP response
@@ -34,11 +33,12 @@ use serde_json::{json, Value};
 ///
 /// These methods create a new `HttpResponse`
 /// with the appropriate status code and a default message.
+#[allow(clippy::result_large_err)]
 #[derive(Debug)]
 pub struct HttpResponse {
-    data: Value,
-    error: Value,
-    errors: Value,
+    data: Box<Value>,
+    error: Box<Value>,
+    errors: Box<Value>,
     code: StatusCode,
     message: Box<str>,
     headers: Option<HashMap<HeaderName, HeaderValue>>,
@@ -48,9 +48,9 @@ impl HttpResponse {
     pub fn builder(code: StatusCode) -> Self {
         Self {
             code,
-            data: Value::Null,
-            error: Value::Null,
-            errors: Value::Null,
+            data: Box::new(Value::Null),
+            error: Box::new(Value::Null),
+            errors: Box::new(Value::Null),
             message: code.canonical_reason().unwrap_or("No Message").into(),
             headers: None,
         }
@@ -71,9 +71,7 @@ impl HttpResponse {
         if let (Ok(header_name), Ok(header_value)) =
             (HeaderName::try_from(key), HeaderValue::try_from(value))
         {
-            self.headers
-                .get_or_insert(HashMap::new())
-                .insert(header_name, header_value);
+            (*self.headers.get_or_insert_with(HashMap::new)).insert(header_name, header_value);
         }
 
         self
@@ -88,7 +86,7 @@ impl HttpResponse {
             Value::String("Serialization failed".into())
         });
 
-        self.data = data;
+        self.data = Box::new(data);
         self
     }
 
@@ -101,7 +99,7 @@ impl HttpResponse {
             Value::String("Serialization failed".into())
         });
 
-        self.error = error;
+        self.error = Box::new(error);
         self
     }
 
@@ -114,7 +112,7 @@ impl HttpResponse {
             Value::String("Serialization failed".into())
         });
 
-        self.errors = errors;
+        self.errors = Box::new(errors);
         self
     }
 
@@ -152,22 +150,22 @@ impl IntoResponse for HttpResponse {
             "timestamp": timestamp,
         });
 
-        if self.data != Value::Null {
+        if *self.data != Value::Null {
             body.as_object_mut()
                 .unwrap()
-                .insert("data".into(), self.data);
+                .insert("data".into(), *self.data);
         }
 
-        if self.error != Value::Null {
+        if *self.error != Value::Null {
             body.as_object_mut()
                 .unwrap()
-                .insert("error".into(), self.error);
+                .insert("error".into(), *self.error);
         }
 
-        if self.errors != Value::Null {
+        if *self.errors != Value::Null {
             body.as_object_mut()
                 .unwrap()
-                .insert("errors".into(), self.errors);
+                .insert("errors".into(), *self.errors);
         }
 
         let mut response = (self.code, Json(body)).into_response();
