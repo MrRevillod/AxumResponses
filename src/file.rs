@@ -72,3 +72,9 @@ impl FileResponse {
             .into_response()
     }
 }
+
+impl IntoResponse for FileResponse {
+    fn into_response(self) -> axum::response::Response {
+        self.build().into_response()
+    }
+}
