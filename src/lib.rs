@@ -4,6 +4,9 @@ mod tests;
 #[allow(non_snake_case)]
 pub mod http;
 
+mod file;
+
+pub use file::{ContentDisposition, FileResponse, FileResult};
 use http::HttpResponse;
 
 #[allow(clippy::result_large_err)]

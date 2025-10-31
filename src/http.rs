@@ -45,6 +45,7 @@ pub struct HttpResponse {
 }
 
 impl HttpResponse {
+    #[doc(hidden)]
     pub fn builder(code: StatusCode) -> Self {
         Self {
             code,
@@ -116,6 +117,7 @@ impl HttpResponse {
         self
     }
 
+    #[doc(hidden)]
     pub fn build(self) -> impl IntoResponse {
         self.into_response()
     }
@@ -267,20 +269,20 @@ impl HttpResponse {
 
     /// 301 Moved Permanently
     /// [[RFC9110, Section 15.4.2](https://datatracker.ietf.org/doc/html/rfc9110#section-15.4.2)]
-    pub fn MovedPermanently() -> Self {
-        Self::builder(StatusCode::MOVED_PERMANENTLY)
+    pub fn MovedPermanently(location: &str) -> Self {
+        Self::builder(StatusCode::MOVED_PERMANENTLY).add_header("Location", location)
     }
 
     /// 302 Found
     /// [[RFC9110, Section 15.4.3](https://datatracker.ietf.org/doc/html/rfc9110#section-15.4.3)]
-    pub fn Found() -> Self {
-        Self::builder(StatusCode::FOUND)
+    pub fn Found(location: &str) -> Self {
+        Self::builder(StatusCode::FOUND).add_header("Location", location)
     }
 
     /// 303 See Other
     /// [[RFC9110, Section 15.4.4](https://datatracker.ietf.org/doc/html/rfc9110#section-15.4.4)]
-    pub fn SeeOther() -> Self {
-        Self::builder(StatusCode::SEE_OTHER)
+    pub fn SeeOther(location: &str) -> Self {
+        Self::builder(StatusCode::SEE_OTHER).add_header("Location", location)
     }
 
     /// 304 Not Modified
@@ -297,14 +299,14 @@ impl HttpResponse {
 
     /// 307 Temporary Redirect
     /// [[RFC9110, Section 15.4.7](https://datatracker.ietf.org/doc/html/rfc9110#section-15.4.7)]
-    pub fn TemporaryRedirect() -> Self {
-        Self::builder(StatusCode::TEMPORARY_REDIRECT)
+    pub fn TemporaryRedirect(location: &str) -> Self {
+        Self::builder(StatusCode::TEMPORARY_REDIRECT).add_header("Location", location)
     }
 
     /// 308 Permanent Redirect
     /// [[RFC9110, Section 15.4.8](https://datatracker.ietf.org/doc/html/rfc9110#section-15.4.8)]
-    pub fn PermanentRedirect() -> Self {
-        Self::builder(StatusCode::PERMANENT_REDIRECT)
+    pub fn PermanentRedirect(location: &str) -> Self {
+        Self::builder(StatusCode::PERMANENT_REDIRECT).add_header("Location", location)
     }
 
     /// 400 Bad Request
