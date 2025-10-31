@@ -26,7 +26,7 @@ Añade la dependencia a tu `Cargo.toml`:
 
 ```toml
 [dependencies]
-axum_responses = "0.4.3"
+axum_responses = "0.4.6"
 ```
 
 ## Características
