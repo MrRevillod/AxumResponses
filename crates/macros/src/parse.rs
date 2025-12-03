@@ -1,5 +1,5 @@
 use axum::http::StatusCode;
-use syn::{Attribute, Error, Expr, Ident, Lit, spanned::Spanned};
+use syn::{Attribute, Error, Expr, ExprLit, ExprPath, Ident, Lit, spanned::Spanned};
 
 #[derive(Default)]
 pub struct VariantConfig {
@@ -58,6 +58,7 @@ fn parse_u16_to_status_code(attr: &Attribute) -> syn::Result<StatusCode> {
             Lit::Int(i) => Ok(i),
             other => Err(Error::new(other.span(), "expected integer literal")),
         },
+
         other => Err(Error::new(other.span(), "expected integer literal")),
     }?;
 
@@ -68,23 +69,32 @@ fn parse_u16_to_status_code(attr: &Attribute) -> syn::Result<StatusCode> {
 
 fn parse_error_value(attr: &Attribute) -> syn::Result<ErrorValue> {
     match attr.parse_args::<Expr>()? {
-        Expr::Lit(e) => match e.lit {
-            Lit::Str(s) => {
-                let value = s.value();
-                if value.contains('{') {
-                    Ok(ErrorValue::FormatString(value))
-                } else {
-                    Ok(ErrorValue::Literal(value))
-                }
-            }
-            other => Err(Error::new(other.span(), "expected string literal")),
-        },
-        Expr::Path(p) => p
-            .path
-            .get_ident()
-            .map(|id| ErrorValue::FieldName(id.to_string()))
-            .ok_or_else(|| Error::new(p.span(), "expected simple identifier")),
-
-        other => Err(Error::new(other.span(), "expected string or identifier")),
+        Expr::Lit(e) => parse_literal_error_value(e),
+        Expr::Path(p) => parse_field_error_value(p),
+        other => Err(Error::new(
+            other.span(),
+            "expected string literal or identifier",
+        )),
     }
+}
+
+fn parse_literal_error_value(expr: ExprLit) -> syn::Result<ErrorValue> {
+    match expr.lit {
+        Lit::Str(s) => {
+            let value = s.value();
+            if value.contains('{') {
+                Ok(ErrorValue::FormatString(value))
+            } else {
+                Ok(ErrorValue::Literal(value))
+            }
+        }
+        other => Err(Error::new(other.span(), "expected string literal")),
+    }
+}
+
+fn parse_field_error_value(expr: ExprPath) -> syn::Result<ErrorValue> {
+    expr.path
+        .get_ident()
+        .map(|id| ErrorValue::FieldName(id.to_string()))
+        .ok_or_else(|| Error::new(expr.span(), "expected simple identifier"))
 }

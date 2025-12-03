@@ -79,3 +79,42 @@ fn error_value_to_tokens(error: &ErrorValue) -> TokenStream {
         ErrorValue::FormatString(template) => quote! { format!(#template) },
     }
 }
+
+pub fn generate_function_enum_variants(variant: &Variant) -> TokenStream {
+    let variant_name = &variant.ident;
+
+    match &variant.fields {
+        Fields::Unit => {
+            quote! {}
+        }
+
+        Fields::Unnamed(_) => {
+            quote! {}
+        }
+
+        Fields::Named(fields) => {
+            let param_names: Vec<_> = fields
+                .named
+                .iter()
+                .filter_map(|f| f.ident.as_ref())
+                .collect();
+
+            let param_defs: Vec<_> = fields
+                .named
+                .iter()
+                .map(|f| {
+                    let name = &f.ident;
+                    let ty = &f.ty;
+                    quote! { #name: #ty }
+                })
+                .collect();
+
+            quote! {
+                #[allow(non_snake_case)]
+                pub fn #variant_name(#(#param_defs),*) -> Self {
+                    Self::#variant_name { #(#param_names),* }
+                }
+            }
+        }
+    }
+}

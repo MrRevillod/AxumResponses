@@ -38,7 +38,6 @@ use serde_json::{json, Map, Value};
 /// - `HttpResponse::NotFound()` for 404 Not Found
 #[derive(Debug)]
 pub struct JsonResponse {
-    request_id: Option<Box<str>>,
     json: Box<Map<String, Value>>,
     code: StatusCode,
     message: Box<str>,
@@ -48,7 +47,6 @@ pub struct JsonResponse {
 /// The body structure of the JSON response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonResponseBody {
-    pub request_id: Option<Box<str>>,
     pub code: u16,
     pub success: bool,
     pub message: Box<str>,
@@ -67,15 +65,8 @@ impl JsonResponse {
             code,
             json: Box::new(Map::new()),
             message: code.canonical_reason().unwrap_or("No Message").into(),
-            request_id: None,
             headers: None,
         }
-    }
-
-    /// Sets the request ID for the response.
-    pub fn request_id(mut self, request_id: impl Into<String>) -> Self {
-        self.request_id = Some(request_id.into().into_boxed_str());
-        self
     }
 
     /// Sets the response message.
@@ -158,10 +149,6 @@ impl AxumIntoResponse for JsonResponse {
             "message": self.message,
             "timestamp": timestamp,
         });
-
-        if let Some(request_id) = self.request_id {
-            body["request_id"] = Value::String(request_id.into());
-        }
 
         if let Some(data) = self.json.get("data") {
             body["data"] = data.clone();

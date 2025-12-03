@@ -8,6 +8,8 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{Data, DeriveInput, Error, parse_macro_input};
 
+use crate::generation::generate_function_enum_variants;
+
 #[proc_macro_derive(HttpError, attributes(code, error, errors, message))]
 pub fn derive_error_macro(item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as DeriveInput);
@@ -20,6 +22,7 @@ pub fn derive_error_macro(item: TokenStream) -> TokenStream {
 
     let self_ty = &input.ident;
     let mut match_arms = Vec::new();
+    let mut variant_functions = Vec::new();
 
     for variant in &enum_data.variants {
         let variant_config = match parse_variant_config(&variant.ident, &variant.attrs) {
@@ -32,7 +35,10 @@ pub fn derive_error_macro(item: TokenStream) -> TokenStream {
             Err(e) => return e.to_compile_error().into(),
         };
 
+        let generated_variant_function = generate_function_enum_variants(variant);
+
         match_arms.push(generated);
+        variant_functions.push(generated_variant_function);
     }
 
     quote! {
@@ -50,6 +56,10 @@ pub fn derive_error_macro(item: TokenStream) -> TokenStream {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{:?}", self)
             }
+        }
+
+        impl #self_ty {
+            #(#variant_functions)*
         }
     }
     .into()
