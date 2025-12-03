@@ -1,5 +1,4 @@
-use axum::response::IntoResponse;
-use axum_responses::HttpError;
+use axum_responses::{HttpError, JsonResponse};
 use serde::Serialize;
 use thiserror::Error;
 
@@ -26,10 +25,14 @@ pub struct Detail {
     pub issue: String,
 }
 
-impl IntoResponse for AppError {
-    fn into_response(self) -> axum::response::Response {
-        match self {
-            any => any.into_response(),
+impl From<AppError> for JsonResponse {
+    fn from(err: AppError) -> Self {
+        match err {
+            AppError::Simple(simple_err) => simple_err.into(),
+            AppError::DatabaseError(db_err) => {
+                eprintln!("Database error occurred: {}", db_err);
+                JsonResponse::builder(500).message("Internal Server Error")
+            }
         }
     }
 }
