@@ -2,15 +2,15 @@ use std::collections::HashMap;
 
 use axum::{
     http::{HeaderName, HeaderValue, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse as AxumIntoResponse, Response as AxumResponse},
     Json,
 };
 
 use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 
-/// ## HttpResponse
+/// ## JsonResponse | HttpResponse
 ///
 /// Represents a structured HTTP response
 /// that can be used in Axum applications.
@@ -18,43 +18,64 @@ use serde_json::{json, Value};
 /// It implements `IntoResponse` to convert
 /// the response into an Axum-compatible response.
 ///
-/// The IntoResponse returns a HttpResponse follows two conventions:
+/// The IntoResponse returns a Response follows a standard JSON structure:
 ///
-/// 1. `RFC 7231` - HTTP/1.1 Semantics and Content
-/// 2. `RFC 8259` - The JavaScript Object Notation (JSON) Data Interchange Format
-///
-/// The headers are stored in a `HeaderMap`
-/// but they are not serialized into the final JSON body.
+/// ```json
+/// {
+///    "code": 200,
+///    "success": true,
+///    "message": "OK",
+///    "timestamp": "2023-10-01T12:00:00Z",
+///    "requestId": "optional-request-id"
+/// }
+/// ```
+/// Additionally, it can include optional fields such as `data`, `error`, and `errors`
+/// to provide more context about the response.
 ///
 /// ### Http Code Variants
 /// The struct provides methods for common HTTP status codes for example:
 /// - `HttpResponse::Ok()` for 200 OK
 /// - `HttpResponse::NotFound()` for 404 Not Found
-///
-/// These methods create a new `HttpResponse`
-/// with the appropriate status code and a default message.
-#[allow(clippy::result_large_err)]
 #[derive(Debug)]
-pub struct HttpResponse {
-    data: Box<Value>,
-    error: Box<Value>,
-    errors: Box<Value>,
+pub struct JsonResponse {
+    request_id: Option<Box<str>>,
+    json: Box<Map<String, Value>>,
     code: StatusCode,
     message: Box<str>,
     headers: Option<HashMap<HeaderName, HeaderValue>>,
 }
 
-impl HttpResponse {
+/// The body structure of the JSON response.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JsonResponseBody {
+    pub request_id: Option<Box<str>>,
+    pub code: u16,
+    pub success: bool,
+    pub message: Box<str>,
+    pub timestamp: String,
+    pub data: Option<Value>,
+    pub error: Option<Value>,
+    pub errors: Option<Value>,
+}
+
+impl JsonResponse {
     #[doc(hidden)]
-    pub fn builder(code: StatusCode) -> Self {
+    pub fn builder(code: impl TryInto<StatusCode>) -> Self {
+        let code = code.try_into().unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+
         Self {
             code,
-            data: Box::new(Value::Null),
-            error: Box::new(Value::Null),
-            errors: Box::new(Value::Null),
+            json: Box::new(Map::new()),
             message: code.canonical_reason().unwrap_or("No Message").into(),
+            request_id: None,
             headers: None,
         }
+    }
+
+    /// Sets the request ID for the response.
+    pub fn request_id(mut self, request_id: impl Into<String>) -> Self {
+        self.request_id = Some(request_id.into().into_boxed_str());
+        self
     }
 
     /// Sets the response message.
@@ -83,11 +104,12 @@ impl HttpResponse {
     /// If serialization fails, it logs a warning and sets `data` to an error message.
     pub fn data<T: Serialize>(mut self, data: T) -> Self {
         let data = serde_json::to_value(data).unwrap_or_else(|err| {
-            eprintln!("Warning: Failed to serialize response data field: {err}");
+            eprintln!("Warning: Failed to serialize response 'data' field: {err}");
             Value::String("Serialization failed".into())
         });
 
-        self.data = Box::new(data);
+        self.json.insert("data".into(), data);
+
         self
     }
 
@@ -96,11 +118,12 @@ impl HttpResponse {
     /// If serialization fails, it logs a warning and sets `error` to an error message.
     pub fn error<T: Serialize>(mut self, error: T) -> Self {
         let error = serde_json::to_value(error).unwrap_or_else(|err| {
-            eprintln!("Warning: Failed to serialize response error field: {err}");
+            eprintln!("Warning: Failed to serialize response 'error' field: {err}");
             Value::String("Serialization failed".into())
         });
 
-        self.error = Box::new(error);
+        self.json.insert("error".into(), error);
+
         self
     }
 
@@ -113,36 +136,20 @@ impl HttpResponse {
             Value::String("Serialization failed".into())
         });
 
-        self.errors = Box::new(errors);
+        self.json.insert("errors".into(), errors);
+
         self
     }
 
     #[doc(hidden)]
-    pub fn build(self) -> impl IntoResponse {
-        self.into_response()
+    pub fn builder_u16(code: u16) -> Self {
+        let status_code = StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        Self::builder(status_code)
     }
 }
 
-/// Represents the body of the HTTP response.
-/// Can be used to tests to verify the structure of the response.
-/// This is the structure of the JSON response body that will
-/// be returned by the `HttpResponse`.
-///
-/// The data field is optional and will be included
-/// only if is setted in the `HttpResponse` builder.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ResponseBody {
-    pub code: u16,
-    pub success: bool,
-    pub message: Box<str>,
-    pub timestamp: String,
-    pub data: Option<Value>,
-    pub error: Option<Value>,
-    pub errors: Option<Value>,
-}
-
-impl IntoResponse for HttpResponse {
-    fn into_response(self) -> axum::response::Response {
+impl AxumIntoResponse for JsonResponse {
+    fn into_response(self) -> AxumResponse {
         let timestamp = Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true);
 
         let mut body = json!({
@@ -152,22 +159,20 @@ impl IntoResponse for HttpResponse {
             "timestamp": timestamp,
         });
 
-        if *self.data != Value::Null {
-            body.as_object_mut()
-                .unwrap()
-                .insert("data".into(), *self.data);
+        if let Some(request_id) = self.request_id {
+            body["request_id"] = Value::String(request_id.into());
         }
 
-        if *self.error != Value::Null {
-            body.as_object_mut()
-                .unwrap()
-                .insert("error".into(), *self.error);
+        if let Some(data) = self.json.get("data") {
+            body["data"] = data.clone();
         }
 
-        if *self.errors != Value::Null {
-            body.as_object_mut()
-                .unwrap()
-                .insert("errors".into(), *self.errors);
+        if let Some(error) = self.json.get("error") {
+            body["error"] = error.clone();
+        }
+
+        if let Some(errors) = self.json.get("errors") {
+            body["errors"] = errors.clone();
         }
 
         let mut response = (self.code, Json(body)).into_response();
@@ -182,7 +187,7 @@ impl IntoResponse for HttpResponse {
     }
 }
 
-impl HttpResponse {
+impl JsonResponse {
     /// 100 Continue
     /// [[RFC9110, Section 15.2.1](https://datatracker.ietf.org/doc/html/rfc9110#section-15.2.1)]
     pub fn Continue() -> Self {
