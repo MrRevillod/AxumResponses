@@ -12,10 +12,10 @@ type AppResult<T> = Result<T, AppError>;
 
 #[tokio::main]
 async fn main() {
-    let app = Router::new().route("/file", get(handler));
+    let app = Router::new().route("/test", get(handler));
     let server = TestServer::new(app).unwrap();
 
-    let response = server.get("/file").await.json::<JsonResponseBody>();
+    let response = server.get("/test").await.json::<JsonResponseBody>();
 
     dbg!(response);
 }

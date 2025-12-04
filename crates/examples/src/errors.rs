@@ -7,6 +7,9 @@ pub enum AppError {
     #[error(transparent)]
     Simple(#[from] SimpleError),
 
+    #[error("I/O error: {0}")]
+    IoError(#[from] std::io::Error),
+
     #[error("Database error: {0}")]
     DatabaseError(#[from] sqlx::Error),
 }
@@ -28,11 +31,11 @@ pub struct Detail {
 impl From<AppError> for JsonResponse {
     fn from(err: AppError) -> Self {
         match err {
-            AppError::Simple(simple_err) => simple_err.into(),
             AppError::DatabaseError(db_err) => {
                 eprintln!("Database error occurred: {}", db_err);
                 JsonResponse::builder(500).message("Internal Server Error")
             }
+            other => JsonResponse::from(other),
         }
     }
 }

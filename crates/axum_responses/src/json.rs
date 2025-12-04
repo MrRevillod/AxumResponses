@@ -10,7 +10,7 @@ use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 
-/// ## JsonResponse | HttpResponse
+/// ## JsonResponse
 ///
 /// Represents a structured HTTP response
 /// that can be used in Axum applications.
@@ -36,7 +36,7 @@ use serde_json::{json, Map, Value};
 /// The struct provides methods for common HTTP status codes for example:
 /// - `HttpResponse::Ok()` for 200 OK
 /// - `HttpResponse::NotFound()` for 404 Not Found
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct JsonResponse {
     json: Box<Map<String, Value>>,
     code: StatusCode,

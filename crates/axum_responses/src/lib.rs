@@ -1,9 +1,11 @@
 mod file;
 mod macros;
+mod response;
 
 #[allow(non_snake_case)]
 mod json;
 
+use axum::response::IntoResponse;
 pub use axum_responses_macros::HttpError;
 pub use file::{ContentDisposition, FileResponse, FileResult};
 pub use json::{JsonResponse, JsonResponseBody};
