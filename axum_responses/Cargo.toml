@@ -7,6 +7,8 @@ authors = ["Luciano Revillod <lrevillod2022@alu.uct.cl>"]
 description = "Standardized JSON Responses for Axum Framework"
 readme = "README.md"
 repository = "https://github.com/MrRevillod/AxumResponses"
+keywords = ["axum", "responses", "json", "api"]
+categories = ["web-programming", "web-programming::http-server"]
 
 [dependencies]
 axum = "0.8.4"
@@ -14,7 +16,7 @@ chrono = "0.4.41"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 thiserror = "2.0.17"
-axum_responses_macros = { path = "../macros", package = "macros" }
+axum_responses_macros = { path = "../axum_responses_macros" }
 
 [dev-dependencies]
 tokio = { version = "1.45.0", features = ["full"] }

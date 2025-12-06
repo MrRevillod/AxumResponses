@@ -1,0 +1,20 @@
+[package]
+name = "axum_responses_macros"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Luciano Revillod <lrevillod2022@alu.uct.cl>"]
+description = "Procedural macros for axum_responses"
+repository = "https://github.com/MrRevillod/AxumResponses"
+keywords = ["axum", "responses", "json", "api"]
+categories = ["web-programming", "web-programming::http-server"]
+readme = "../README.md"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+axum = "0.8.7"
+proc-macro2 = "1.0"
+quote = "1.0"
+syn = "2.0"

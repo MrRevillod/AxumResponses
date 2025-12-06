@@ -12,7 +12,7 @@
 
 ## Description
 
-**Axum Responses** is a library designed to simplify the creation and handling of HTTP responses in applications built with [Axum](https://github.com/tokio-rs/axum). It provides a clear abstraction for handling standard and custom responses, along with useful tools.
+**Axum Responses** is a crate designed to simplify the creation and handling of HTTP responses in applications built with [Axum](https://github.com/tokio-rs/axum). It provides abstractions for handling standardized JSON responses, file responses, and error management, making it easier to build robust web applications.
 
 ## Installation
 
