@@ -28,8 +28,14 @@ pub async fn missing_field() -> AppResult {
     Err(ValidationError::missing_field("username".into()))?
 }
 
+pub async fn custom_message() -> AppResult {
+    // ValidationError -> AppError (via #[from]) -> IntoResponse
+    Err(ValidationError::custom_message(
+        "A custom error occurred".into(),
+    ))?
+}
+
 pub async fn rate_limited() -> AppResult {
-    // Direct AppError variant
     Err(AppError::RateLimited)
 }
 

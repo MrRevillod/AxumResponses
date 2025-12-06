@@ -1,14 +1,20 @@
 use axum::http::StatusCode;
 use syn::{Attribute, Error, Ident, spanned::Spanned};
 
+#[derive(Debug, Clone)]
+pub enum MessageValue {
+    Static(String),
+    Field(String),
+}
+
 #[derive(Default)]
 pub struct HttpErrorConfig {
     /// Delegate to inner type's `From<T> for Json`
     pub transparent: bool,
     /// HTTP status code
     pub code: Option<StatusCode>,
-    /// Custom message (defaults to canonical reason)
-    pub message: Option<String>,
+    /// Custom message (static string or field reference)
+    pub message: Option<MessageValue>,
     /// Named field to include as "error" in response
     pub error_field: Option<String>,
     /// Named field to include as "errors" in response
@@ -45,8 +51,19 @@ impl HttpErrorConfig {
                     })?);
                 }
                 "message" => {
-                    let lit: syn::LitStr = meta.value()?.parse()?;
-                    self.message = Some(lit.value());
+                    if meta.input.peek(syn::Token![=]) {
+                        meta.input.parse::<syn::Token![=]>()?;
+                        if let Ok(lit) = meta.input.parse::<syn::LitStr>() {
+                            self.message = Some(MessageValue::Static(lit.value()));
+                        } else {
+                            let field: Ident = meta.input.parse()?;
+                            self.message =
+                                Some(MessageValue::Field(field.to_string()));
+                        }
+                    } else {
+                        let field: Ident = meta.input.parse()?;
+                        self.message = Some(MessageValue::Field(field.to_string()));
+                    }
                 }
                 "error" => {
                     let field: Ident = meta.value()?.parse()?;
@@ -101,13 +118,15 @@ impl HttpErrorConfig {
         Ok(())
     }
 
-    pub fn message(&self) -> String {
-        self.message.clone().unwrap_or_else(|| {
-            self.code
-                .as_ref()
-                .map(|c| c.canonical_reason().unwrap_or("Unknown Error"))
-                .unwrap_or("Unknown Error")
-                .to_string()
-        })
+    pub fn message(&self) -> Option<MessageValue> {
+        self.message.clone()
+    }
+
+    pub fn default_message(&self) -> String {
+        self.code
+            .as_ref()
+            .map(|c| c.canonical_reason().unwrap_or("Unknown Error"))
+            .unwrap_or("Unknown Error")
+            .to_string()
     }
 }

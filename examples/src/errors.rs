@@ -31,6 +31,10 @@ pub enum ValidationError {
     #[error("Field is required")]
     #[http(code = 400, message = "{field} is required")]
     MissingField { field: String },
+
+    #[error("Custom error")]
+    #[http(code = 400, message = error_msg)]
+    CustomMessage { error_msg: String },
 }
 
 impl ValidationError {
@@ -40,6 +44,10 @@ impl ValidationError {
 
     pub fn missing_field(field: String) -> Self {
         ValidationError::MissingField { field }
+    }
+
+    pub fn custom_message(msg: String) -> Self {
+        ValidationError::CustomMessage { error_msg: msg }
     }
 }
 

@@ -1,6 +1,6 @@
 mod parse;
 
-use parse::HttpErrorConfig;
+use parse::{HttpErrorConfig, MessageValue};
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{Data, DeriveInput, Fields, Ident};
@@ -108,10 +108,23 @@ fn generate_pattern(
 
 fn generate_json_builder(fields: &Fields, config: &HttpErrorConfig) -> TokenStream {
     let code = config.code.as_ref().unwrap().as_u16();
-    let message = config.message();
+
+    let message_expr = match config.message() {
+        Some(MessageValue::Static(msg)) => {
+            quote! { format!(#msg) }
+        }
+        Some(MessageValue::Field(field_name)) => {
+            let field_ident = Ident::new(&field_name, Span::call_site());
+            quote! { format!("{}", #field_ident) }
+        }
+        None => {
+            let default_msg = config.default_message();
+            quote! { #default_msg }
+        }
+    };
 
     let base = quote! {
-        ::axum_responses::JsonResponse::status(#code).message(format!(#message))
+        ::axum_responses::JsonResponse::status(#code).message(#message_expr)
     };
 
     match fields {
