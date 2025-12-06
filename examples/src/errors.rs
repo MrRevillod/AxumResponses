@@ -29,7 +29,7 @@ pub enum ValidationError {
     InvalidInput { details: Vec<FieldError> },
 
     #[error("Field is required")]
-    #[http(code = 400, error = field)]
+    #[http(code = 400, message = "{field} is required")]
     MissingField { field: String },
 }
 

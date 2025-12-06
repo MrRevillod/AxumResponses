@@ -111,7 +111,7 @@ fn generate_json_builder(fields: &Fields, config: &HttpErrorConfig) -> TokenStre
     let message = config.message();
 
     let base = quote! {
-        ::axum_responses::JsonResponse::status(#code).message(#message)
+        ::axum_responses::JsonResponse::status(#code).message(format!(#message))
     };
 
     match fields {

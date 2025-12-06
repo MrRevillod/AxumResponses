@@ -23,6 +23,11 @@ pub async fn create_user() -> AppResult {
     Ok(JsonResponse::Created().message("User created"))
 }
 
+pub async fn missing_field() -> AppResult {
+    // ValidationError -> AppError (via #[from]) -> IntoResponse
+    Err(ValidationError::missing_field("username".into()))?
+}
+
 pub async fn rate_limited() -> AppResult {
     // Direct AppError variant
     Err(AppError::RateLimited)

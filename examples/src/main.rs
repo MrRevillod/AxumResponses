@@ -11,9 +11,10 @@ async fn main() {
     let app = Router::new()
         .route("/users", post(create_user))
         .route("/limited", get(rate_limited))
-        .route("/io", get(io_error));
+        .route("/io", get(io_error))
+        .route("/missing_field", get(missing_field));
 
-    axum::serve(TcpListener::bind("0.0.0.0:8000").await.unwrap(), app)
+    axum::serve(TcpListener::bind("0.0.0.0:9000").await.unwrap(), app)
         .await
         .unwrap();
 }
