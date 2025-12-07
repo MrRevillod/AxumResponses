@@ -53,7 +53,7 @@ use syn::{DeriveInput, parse_macro_input};
 ///     Io(#[from] std::io::Error),
 /// }
 /// ```
-#[proc_macro_derive(HttpError, attributes(http))]
+#[proc_macro_derive(HttpError, attributes(http, tracing))]
 pub fn derive_http_error(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 

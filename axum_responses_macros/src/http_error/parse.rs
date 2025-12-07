@@ -1,5 +1,8 @@
 use axum::http::StatusCode;
-use syn::{Attribute, Error, Ident, spanned::Spanned};
+use syn::{
+    Attribute, Error, Ident, LitInt, LitStr, Token, meta::ParseNestedMeta,
+    spanned::Spanned,
+};
 
 #[derive(Debug, Clone)]
 pub enum MessageValue {
@@ -19,6 +22,9 @@ pub struct HttpErrorConfig {
     pub error_field: Option<String>,
     /// Named field to include as "errors" in response
     pub errors_field: Option<String>,
+
+    /// Optional tracing level
+    pub tracing_level: Option<String>,
 }
 
 impl HttpErrorConfig {
@@ -29,7 +35,33 @@ impl HttpErrorConfig {
             config.parse_http_attr(attr)?;
         }
 
+        for attr in attrs.iter().filter(|a| a.path().is_ident("tracing")) {
+            attr.parse_nested_meta(|meta| {
+                let level_ident = meta.path.get_ident().ok_or_else(|| {
+                    Error::new(meta.path.span(), "expected identifier")
+                })?;
+
+                let level_str = level_ident.to_string();
+
+                match level_str.as_str() {
+                    "debug" | "info" | "warn" | "error" | "trace" => {
+                        config.tracing_level = Some(level_str);
+                    }
+                    _ => {
+                        return Err(Error::new(
+                            level_ident.span(),
+                            "invalid tracing level, expected one of: debug, info, warn, error",
+                        ));
+                    }
+                }
+
+                Ok(())
+
+            })?;
+        }
+
         config.validate(ident)?;
+
         Ok(config)
     }
 
@@ -44,33 +76,17 @@ impl HttpErrorConfig {
                     self.transparent = true;
                 }
                 "code" => {
-                    let lit: syn::LitInt = meta.value()?.parse()?;
-                    let code = lit.base10_parse::<u16>()?;
-                    self.code = Some(StatusCode::from_u16(code).map_err(|_| {
-                        Error::new(lit.span(), "invalid HTTP status code")
-                    })?);
+                    self.code = Some(Self::parse_status_code_value(ident, &meta)?);
                 }
                 "message" => {
-                    if meta.input.peek(syn::Token![=]) {
-                        meta.input.parse::<syn::Token![=]>()?;
-                        if let Ok(lit) = meta.input.parse::<syn::LitStr>() {
-                            self.message = Some(MessageValue::Static(lit.value()));
-                        } else {
-                            let field: Ident = meta.input.parse()?;
-                            self.message =
-                                Some(MessageValue::Field(field.to_string()));
-                        }
-                    } else {
-                        let field: Ident = meta.input.parse()?;
-                        self.message = Some(MessageValue::Field(field.to_string()));
-                    }
+                    self.message = Some(Self::parse_message_value(ident, &meta)?);
                 }
                 "error" => {
-                    let field: Ident = meta.value()?.parse()?;
+                    let field = meta.value()?.parse::<Ident>()?;
                     self.error_field = Some(field.to_string());
                 }
                 "errors" => {
-                    let field: Ident = meta.value()?.parse()?;
+                    let field = meta.value()?.parse::<Ident>()?;
                     self.errors_field = Some(field.to_string());
                 }
                 other => {
@@ -99,20 +115,16 @@ impl HttpErrorConfig {
             ));
         }
 
-        if self.transparent {
-            if self.message.is_some() {
-                return Err(Error::new_spanned(
-                    ident,
-                    "`message` is not valid with `transparent`",
-                ));
-            }
-
-            if self.error_field.is_some() || self.errors_field.is_some() {
-                return Err(Error::new_spanned(
-                    ident,
-                    "`error`/`errors` is not valid with `transparent`",
-                ));
-            }
+        if self.transparent
+            && (self.message.is_some()
+                || self.error_field.is_some()
+                || self.errors_field.is_some()
+                || self.tracing_level.is_some())
+        {
+            return Err(Error::new_spanned(
+                ident,
+                "`message`, `error`, `errors`, and `tracing` are not valid with `transparent`",
+            ));
         }
 
         Ok(())
@@ -128,5 +140,48 @@ impl HttpErrorConfig {
             .map(|c| c.canonical_reason().unwrap_or("Unknown Error"))
             .unwrap_or("Unknown Error")
             .to_string()
+    }
+
+    fn parse_message_value(
+        ident: &Ident,
+        meta: &ParseNestedMeta,
+    ) -> syn::Result<MessageValue> {
+        if !meta.input.peek(Token![=]) {
+            return Err(Error::new(ident.span(), "expected '=' after 'message'"));
+        }
+
+        meta.input.parse::<Token![=]>()?;
+
+        if let Ok(lit) = meta.input.parse::<LitStr>() {
+            return Ok(MessageValue::Static(lit.value()));
+        }
+
+        if let Ok(field) = meta.input.parse::<Ident>() {
+            return Ok(MessageValue::Field(field.to_string()));
+        }
+
+        Err(Error::new(
+            ident.span(),
+            "expected string literal or identifier",
+        ))
+    }
+
+    fn parse_status_code_value(
+        ident: &Ident,
+        meta: &ParseNestedMeta,
+    ) -> syn::Result<StatusCode> {
+        if !meta.input.peek(Token![=]) {
+            return Err(Error::new(ident.span(), "expected '=' after 'code'"));
+        }
+
+        meta.input.parse::<Token![=]>()?;
+
+        let lit = meta.input.parse::<LitInt>()?;
+        let code = lit.base10_parse::<u16>()?;
+
+        let status = StatusCode::from_u16(code)
+            .map_err(|_| Error::new(lit.span(), "invalid HTTP status code"))?;
+
+        Ok(status)
     }
 }

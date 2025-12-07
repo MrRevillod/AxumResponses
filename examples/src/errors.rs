@@ -25,6 +25,7 @@ pub enum AppError {
 #[derive(Debug, Error, HttpError)]
 pub enum ValidationError {
     #[error("Validation failed")]
+    #[tracing(error)]
     #[http(code = 400, errors = details)]
     InvalidInput { details: Vec<FieldError> },
 
@@ -33,6 +34,7 @@ pub enum ValidationError {
     MissingField { field: String },
 
     #[error("Custom error")]
+    #[tracing(error)]
     #[http(code = 400, message = error_msg)]
     CustomMessage { error_msg: String },
 }

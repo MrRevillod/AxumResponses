@@ -3,42 +3,42 @@ mod parse;
 use parse::{HttpErrorConfig, MessageValue};
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
-use syn::{Data, DeriveInput, Fields, Ident};
+use syn::{Data, DeriveInput, Error, Fields, Ident};
 
 pub fn derive(input: DeriveInput) -> syn::Result<TokenStream> {
     let enum_name = &input.ident;
 
-    let variants = match &input.data {
-        Data::Enum(data) => &data.variants,
-        _ => {
-            return Err(syn::Error::new_spanned(
-                input,
-                "HttpError can only be derived for enums",
-            ));
-        }
+    let Data::Enum(data) = &input.data else {
+        return Err(Error::new_spanned(
+            input,
+            "HttpError can only be derived for enums",
+        ));
     };
 
+    let variants = &data.variants;
     let mut from_arms = Vec::new();
 
     for variant in variants {
         let config = HttpErrorConfig::from_attrs(&variant.ident, &variant.attrs)?;
 
         if config.transparent {
-            match &variant.fields {
-                Fields::Unnamed(f) if f.unnamed.len() == 1 => {}
-                _ => {
-                    return Err(syn::Error::new_spanned(
-                        &variant.ident,
-                        "transparent variants must have exactly one unnamed field",
-                    ));
-                }
+            let is_single_unnamed_field = matches!(
+                &variant.fields,
+                Fields::Unnamed(f) if f.unnamed.len() == 1
+            );
+
+            if !is_single_unnamed_field {
+                return Err(Error::new_spanned(
+                    &variant.ident,
+                    "transparent variants must have exactly one unnamed field",
+                ));
             }
         }
 
         if (config.error_field.is_some() || config.errors_field.is_some())
             && !matches!(&variant.fields, Fields::Named(_))
         {
-            return Err(syn::Error::new_spanned(
+            return Err(Error::new_spanned(
                 &variant.ident,
                 "`error` and `errors` can only be used with named fields",
             ));
@@ -77,9 +77,15 @@ fn generate_from_arm(
 ) -> TokenStream {
     if !config.transparent {
         let pattern = generate_pattern(enum_name, variant_name, fields);
+        let tracing_stmt = generate_tracing_stmt(variant_name, config, fields);
         let builder = generate_json_builder(fields, config);
 
-        return quote! { #pattern => #builder, };
+        return quote! {
+            #pattern => {
+                #tracing_stmt
+                #builder
+            },
+        };
     }
 
     quote! {
@@ -140,5 +146,72 @@ fn generate_json_builder(fields: &Fields, config: &HttpErrorConfig) -> TokenStre
             }
         }
         _ => base,
+    }
+}
+
+fn generate_tracing_stmt(
+    variant_name: &Ident,
+    config: &HttpErrorConfig,
+    fields: &Fields,
+) -> TokenStream {
+    if config.transparent {
+        return quote! {};
+    }
+
+    let Some(level) = &config.tracing_level else {
+        return quote! {};
+    };
+
+    let tracing_macro = match level.as_str() {
+        "trace" => quote! { ::tracing::trace },
+        "debug" => quote! { ::tracing::debug },
+        "info" => quote! { ::tracing::info },
+        "warn" => quote! { ::tracing::warn },
+        "error" => quote! { ::tracing::error },
+        _ => return quote! {},
+    };
+
+    let variant_str = variant_name.to_string();
+    let status_code = config.code.as_ref().unwrap().as_u16();
+
+    match fields {
+        Fields::Unit => {
+            quote! {
+                #tracing_macro!(
+                    error_type = #variant_str,
+                    status_code = #status_code,
+                    "HTTP error response"
+                );
+            }
+        }
+
+        Fields::Unnamed(f) if f.unnamed.len() == 1 => {
+            quote! {
+                #tracing_macro!(
+                    error = ?_inner,
+                    error_type = #variant_str,
+                    status_code = #status_code,
+                    "HTTP error response"
+                );
+            }
+        }
+
+        Fields::Named(named) => {
+            let field_logs = named.named.iter().map(|field| {
+                let field_name = field.ident.as_ref().unwrap();
+                quote! { #field_name = ?#field_name, }
+            });
+
+            quote! {
+                #tracing_macro!(
+                    #(#field_logs)*
+                    error_type = #variant_str,
+                    status_code = #status_code,
+                    "HTTP error response"
+                );
+            }
+        }
+
+        _ => quote! {},
     }
 }

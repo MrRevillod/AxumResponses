@@ -5,12 +5,25 @@ use axum::Router;
 use axum::routing::{get, post};
 use handlers::*;
 use tokio::net::TcpListener;
+use tracing_subscriber::EnvFilter;
 
 #[cfg(test)]
 mod tests;
 
 #[tokio::main]
 async fn main() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| EnvFilter::new("info")),
+        )
+        .with_target(true)
+        .with_file(true)
+        .with_line_number(true)
+        .init();
+
+    tracing::info!("Starting server");
+
     let app = Router::new()
         .route("/users", post(create_user))
         .route("/limited", get(rate_limited))
