@@ -1,18 +1,8 @@
-<div align="center">
-    <img src="https://pillan.inf.uct.cl/~lrevillod/images/logo-ax-responses.png" width=250 />
-</div>
+# Axum Responses
 
-<div align="center">
-    <h1>Axum Responses</h1>
-</div>
+> <img src="https://pillan.inf.uct.cl/~lrevillod/images/logo-ax-responses.png" width=125 align="right"/>
 
-<div align="center">
-    <strong>A better way to manage responses and errors in Axum</strong>
-</div>
-
-## Description
-
-**Axum Responses** is a crate designed to simplify the creation and handling of HTTP responses in applications built with [Axum](https://github.com/tokio-rs/axum). It provides abstractions for handling standardized JSON responses, file responses, and error management, making it easier to build robust web applications.
+Simplify HTTP responses and error handling in axum based applications. It uses a builder pattern to create standardized JSON responses, file responses, and derive macro to declare, manage, log, and convert errors into json responses.
 
 ## Installation
 
@@ -20,16 +10,11 @@ Add the dependency to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-axum_responses = "0.5.0"
+axum_responses = "0.5.2"
+
+# For data serialization and deserialization
+serde = { version = "*", features = ["derive"] }
 ```
-
-## Features
-
-- **Standarized JSON Responses**: Easily create standardized JSON responses for common HTTP status codes like `200 OK`, `201 Created`, `400 Bad Request`, `404 Not Found`, and more.
-
-- **Friendly File Response Creation**: Use a builder pattern to create file responses and downloads with ease.
-
-- **Error Handling**: Define and manage HTTP errors with custom error types using the `HttpError` derive macro and convert them directly into JSON responses. All of this being compatible with `thiserror`.
 
 ## Usage
 
@@ -74,9 +59,42 @@ async fn handler() -> JsonResponse {
 }
 ```
 
+### Error Handling with HttpError
+
+Define custom error types that automatically convert to JSON responses:
+
+```rust
+use axum_responses::{HttpError, thiserror::Error};
+
+#[derive(Debug, Error, HttpError)]
+pub enum ApiError {
+    #[error("Not found")]
+    #[http(code = 404)]
+    NotFound,
+
+    // Log: error_type="BadRequest", status_code=400, reason=?reason
+    #[tracing(warn)]
+    #[error("Bad request: {message}")]
+    #[http(code = 400, error = reason)]
+    BadRequest { reason: String },
+}
+```
+
+Use in handlers:
+
+```rust
+use axum::response::IntoResponse;
+
+async fn get_user() -> Result<JsonResponse, ApiError> {
+    Err(ApiError::NotFound)
+}
+```
+
+The `http` attibute converts the error into a `JsonResponse` with the specified status code, and optionally other fields that are defined in the builder of `JsonResponse`. In the same way, if you dont provide a message field, it will use the cannonical message for that status code.
+
 ## Examples
 
-You can find complete examples in the examples directory.
+You can find complete examples in the examples directory, including advanced usage with tracing, thiserror attributes, and other features.
 
 ## Breaking Changes
 

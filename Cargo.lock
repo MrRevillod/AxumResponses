@@ -182,7 +182,7 @@ dependencies = [
 
 [[package]]
 name = "axum_responses"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "axum",
  "axum-test 17.3.0",
@@ -196,7 +196,7 @@ dependencies = [
 
 [[package]]
 name = "axum_responses_macros"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "axum",
  "proc-macro2",
