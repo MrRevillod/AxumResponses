@@ -49,6 +49,11 @@
 mod macros;
 mod response;
 
+#[doc(hidden)]
+pub mod __private {
+    pub use tracing;
+}
+
 pub mod thiserror {
     pub use thiserror::Error;
 }

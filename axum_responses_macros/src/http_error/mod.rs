@@ -163,11 +163,11 @@ fn generate_tracing_stmt(
     };
 
     let tracing_macro = match level.as_str() {
-        "trace" => quote! { ::tracing::trace },
-        "debug" => quote! { ::tracing::debug },
-        "info" => quote! { ::tracing::info },
-        "warn" => quote! { ::tracing::warn },
-        "error" => quote! { ::tracing::error },
+        "trace" => quote! { ::axum_responses::__private::tracing::trace },
+        "debug" => quote! { ::axum_responses::__private::tracing::debug },
+        "info" => quote! { ::axum_responses::__private::tracing::info },
+        "warn" => quote! { ::axum_responses::__private::tracing::warn },
+        "error" => quote! { ::axum_responses::__private::tracing::error },
         _ => return quote! {},
     };
 
