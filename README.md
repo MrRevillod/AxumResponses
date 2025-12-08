@@ -1,12 +1,12 @@
 # Axum Responses
 
-> <img src="https://pillan.inf.uct.cl/~lrevillod/images/logo-ax-responses.png" width=150 align="right"/>
+> <img src="https://i.imgur.com/4ysY3bu.png" width=150 align="right"/>
 
 Simplify HTTP responses and error handling in axum based applications.   
 
-It uses a builder pattern to create standardized JSON responses, file responses, and derive macro to declare, manage, log, and convert errors into json responses.
+It uses a builder pattern to create standardized JSON responses, file responses, and derive macro to declare, manage, log, and convert errors into standarized json responses.  
 
->
+<br/>
 
 ## Installation
 
