@@ -16,7 +16,7 @@ use syn::{DeriveInput, parse_macro_input};
 /// Each variant must have `#[http(...)]` with one of:
 ///
 /// **For direct responses:**
-/// - `code = <u16>`: HTTP status code (required)
+/// - `code | status = <u16>`: HTTP status code (required)
 /// - `message = "<string>"`: Custom message (optional, defaults to canonical reason)
 /// - `error = <field>`: Single error field to include (optional, named fields only)
 /// - `errors = <field>`: Multiple errors field to include (optional, named fields only)
@@ -24,33 +24,46 @@ use syn::{DeriveInput, parse_macro_input};
 /// **For delegation:**
 /// - `transparent`: Delegate to inner type's `From<T> for Json` (for wrapping other `HttpError` types)
 ///
+/// **Tracing:**
+/// - `#[tracing(level)]`: Adds structured logging when the error occurs (optional)
+///   - `level`: One of `trace`, `debug`, `info`, `warn`, `error`
+///   - Generates `tracing::*!(...)` calls with error details
+///   - Compatible with `RUST_LOG` for filtering
+///   - Not allowed with `transparent` variants
+///
+/// ### Tracing Output
+/// The generated logs include:
+/// - `error_type`: The variant name as string
+/// - `status_code`: The HTTP status code
+/// - For unnamed variants (single field): `error = ?field` (debug format)
+/// - For named variants: Each field as `field_name = ?field_value`
+/// - Unit variants: Only `error_type` and `status_code`
+///
 /// # Example
 ///
 /// ```rust,ignore
-/// use axum_responses::HttpError;
+/// use axum_responses::{thiserror::Error, HttpError};
 ///
-/// // Domain error
-/// #[derive(Debug, thiserror::Error, HttpError)]
-/// pub enum AuthError {
-///     #[error("Invalid credentials")]
-///     #[http(code = 401)]
-///     InvalidCredentials,
+/// #[derive(Debug, Error, HttpError)]
+/// pub enum ApiError {
+///     #[error("Not found")]
+///     #[http(code = 404)]
+///     #[tracing(info)]  // Log: error_type="NotFound", status_code=404
+///     NotFound,
 ///
 ///     #[error("Forbidden: requires {role}")]
 ///     #[http(code = 403, error = role)]
+///     #[tracing(warn)]  // Log: error_type="Forbidden", status_code=403, role=?role
 ///     Forbidden { role: String },
-/// }
 ///
-/// // Root error composing others
-/// #[derive(Debug, thiserror::Error, HttpError)]
-/// pub enum AppError {
-///     #[error("Auth: {0}")]
-///     #[http(transparent)]  // delegates to AuthError's Json conversion
-///     Auth(#[from] AuthError),
-///
-///     #[error("IO: {0}")]
-///     #[http(code = 500)]  // fixed response, hides internal details
+///     #[error("IO Error: {0}")]
+///     #[http(code = 500)]
+///     #[tracing(error)]  // Log: error_type="Io", status_code=500, error=?_inner
 ///     Io(#[from] std::io::Error),
+///
+///     #[error("Auth Error: {0}")]
+///     #[http(transparent)]  // Delegates to other "HttpError" derivation
+///     Auth(#[from] AuthError),
 /// }
 /// ```
 #[proc_macro_derive(HttpError, attributes(http, tracing))]
