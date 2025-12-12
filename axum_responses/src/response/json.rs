@@ -70,6 +70,14 @@ impl JsonResponse {
         self
     }
 
+    /// Sets optional Request ID for tracing purposes
+    pub fn request_id(mut self, request_id: impl Into<String>) -> Self {
+        self.json
+            .insert("request_id".into(), Value::String(request_id.into()));
+
+        self
+    }
+
     /// Adds a header to the response.
     pub fn header(mut self, key: &str, value: &str) -> Self {
         if let (Ok(header_name), Ok(header_value)) =
@@ -502,6 +510,7 @@ impl IntoResponse for JsonResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonResponseBody {
     pub code: u16,
+    pub request_id: Option<Box<str>>,
     pub success: bool,
     pub message: Box<str>,
     pub timestamp: String,

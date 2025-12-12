@@ -14,7 +14,7 @@ Add the dependency to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-axum_responses = "0.5.3"
+axum_responses = "0.5.4"
 
 # For data serialization and deserialization
 serde = { version = "*", features = ["derive"] }
