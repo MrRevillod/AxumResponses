@@ -22,3 +22,7 @@ axum_responses_macros = { version = "0.1.3", path = "../axum_responses_macros" }
 [dev-dependencies]
 tokio = { version = "1.45.0", features = ["full"] }
 axum-test = "17.3.0"
+
+[features]
+default = []
+multipart = ["axum/multipart"]
